@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a1628" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>CSLTC Attendance Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- html5-qrcode via CDN -->
+  <script src="[unpkg.com](https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js)"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════
+       SCREEN: LOGIN
+  ════════════════════════════════════════ -->
+  <div id="screen-login" class="screen active">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-emblem">⚔</div>
+        <h1 class="org-title">CSLTC</h1>
+        <p class="org-subtitle">Civil Service &amp; Leadership Training Corps</p>
+        <p class="org-tagline">Attendance Tracking System</p>
+      </div>
+
+      <form id="login-form" class="login-form" autocomplete="off">
+        <div class="form-group">
+          <label for="login-password" class="form-label">Access Code</label>
+          <input
+            type="password"
+            id="login-password"
+            class="form-input"
+            placeholder="Enter access code"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <div id="login-error" class="alert alert-error hidden" role="alert">
+          Invalid access code. Please try again.
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">
+          <span class="btn-icon">🔐</span> Sign In
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <span id="sync-status-dot" class="status-dot offline" title="Connection status"></span>
+        <span id="sync-status-label">Offline</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════
+       SCREEN: OFFICER — UNIT SELECTION
+  ════════════════════════════════════════ -->
+  <div id="screen-unit-select" class="screen">
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="header-emblem">⚔</span>
+        <div>
+          <span class="header-title">CSLTC</span>
+          <span class="header-subtitle">Officer Dashboard</span>
+        </div>
+      </div>
+      <button id="btn-logout-officer" class="btn btn-ghost btn-sm">Logout</button>
+    </header>
+
+    <main class="screen-content">
+      <section class="section-card">
+        <h2 class="section-title">Select Your Unit</h2>
+        <p class="section-hint">Choose the unit you are registering attendance for.</p>
+
+        <div class="unit-grid" role="radiogroup" aria-label="Unit selection">
+          <button class="unit-btn" data-unit="Alpha"   role="radio" aria-checked="false">
+            <span class="unit-letter">α</span>
+            <span class="unit-name">Alpha</span>
+          </button>
+          <button class="unit-btn" data-unit="Bravo"   role="radio" aria-checked="false">
+            <span class="unit-letter">β</span>
+            <span class="unit-name">Bravo</span>
+          </button>
+          <button class="unit-btn" data-unit="Charlie" role="radio" aria-checked="false">
+            <span class="unit-letter">γ</span>
+            <span class="unit-name">Charlie</span>
+          </button>
+          <button class="unit-btn" data-unit="Delta"   role="radio" aria-checked="false">
+            <span class="unit-letter">δ</span>
+            <span class="unit-name">Delta</span>
+          </button>
+          <button class="unit-btn" data-unit="Echo"    role="radio" aria-checked="false">
+            <span class="unit-letter">ε</span>
+            <span class="unit-name">Echo</span>
+          </button>
+        </div>
+
+        <button id="btn-proceed-scan" class="btn btn-primary btn-full mt-lg" disabled>
+          Proceed to Scanner →
+        </button>
+      </section>
+    </main>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════
+       SCREEN: OFFICER — SCANNER
+  ════════════════════════════════════════ -->
+  <div id="screen-scanner" class="screen">
+    <header class="app-header">
+      <button id="btn-back-unit" class="btn btn-ghost btn-sm">← Unit</button>
+      <div class="header-center">
+        <span class="header-title">Scanner</span>
+        <span id="active-unit-badge" class="unit-badge">—</span>
+      </div>
+      <div class="header-status">
+        <span id="scanner-sync-dot" class="status-dot offline"></span>
+        <span id="scanner-pending-label" class="pending-label hidden">
+          <span id="pending-count">0</span> pending
+        </span>
+      </div>
+    </header>
+
+    <main class="screen-content scanner-layout">
+
+      <!-- QR Viewfinder -->
+      <section class="scanner-section">
+        <div id="qr-reader" class="qr-viewfinder"></div>
+
+        <div class="scanner-tabs" role="tablist">
+          <button id="tab-camera" class="scanner-tab active" role="tab" aria-selected="true">
+            📷 Camera
+          </button>
+          <button id="tab-manual" class="scanner-tab" role="tab" aria-selected="false">
+            ⌨️ Manual Entry
+          </button>
+        </div>
+
+        <!-- Manual Entry Panel -->
+        <div id="panel-manual" class="manual-panel hidden" role="tabpanel">
+          <form id="manual-entry-form" autocomplete="off">
+            <div class="form-group">
+              <label for="manual-id" class="form-label">Member ID</label>
+              <input
+                type="text"
+                id="manual-id"
+                class="form-input form-input-lg"
+                placeholder="e.g. CSLTC-2025-001"
+                autocapitalize="characters"
+                autocorrect="off"
+                spellcheck="false"
+              />
+            </div>
+            <div class="form-group">
+              <label for="manual-name" class="form-label">Member Name <span class="label-hint">(optional)</span></label>
+              <input
+                type="text"
+                id="manual-name"
+                class="form-input"
+                placeholder="e.g. Juan dela Cruz"
+              />
+            </div>
+            <button type="submit" class="btn btn-primary btn-full mt-sm">
+              ✔ Record Attendance
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Feedback Toast -->
+      <div id="scan-toast" class="scan-toast hidden" role="status" aria-live="polite"></div>
+
+      <!-- Recent Scans Log -->
+      <section class="recent-section">
+        <div class="recent-header">
+          <h3 class="recent-title">Recent Scans</h3>
+          <span id="scan-count-badge" class="count-badge">0</span>
+        </div>
+        <ul id="recent-scans-list" class="recent-list" aria-label="Recent scans">
+          <li class="recent-empty">No scans yet this session.</li>
+        </ul>
+      </section>
+
+    </main>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════
+       SCREEN: PRESIDENT — DASHBOARD
+  ════════════════════════════════════════ -->
+  <div id="screen-president" class="screen">
+    <header class="app-header header-president">
+      <div class="header-brand">
+        <span class="header-emblem">⚔</span>
+        <div>
+          <span class="header-title">CSLTC</span>
+          <span class="header-subtitle">President's Console</span>
+        </div>
+      </div>
+      <button id="btn-logout-president" class="btn btn-ghost btn-sm">Logout</button>
+    </header>
+
+    <main class="screen-content">
+
+      <!-- Summary Cards -->
+      <section class="section-card">
+        <div class="dashboard-header-row">
+          <h2 class="section-title">Attendance Summary</h2>
+          <button id="btn-refresh-dashboard" class="btn btn-secondary btn-sm">↺ Refresh</button>
+        </div>
+
+        <div id="dashboard-loading" class="loading-state hidden">
+          <div class="spinner"></div>
+          <p>Loading data…</p>
+        </div>
+
+        <div id="dashboard-error" class="alert alert-error hidden" role="alert"></div>
+
+        <div id="unit-summary-grid" class="unit-summary-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="total-row" class="total-row hidden">
+          <span class="total-label">Total Present</span>
+          <span id="total-count" class="total-count">0</span>
+        </div>
+      </section>
+
+      <!-- Audit Trail -->
+      <section class="section-card">
+        <h2 class="section-title">Audit Trail <span class="section-hint">(Latest 50 entries)</span></h2>
+        <div class="table-scroll">
+          <table id="audit-table" class="audit-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Unit</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body">
+              <tr><td colspan="4" class="table-empty">No data loaded.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Danger Zone -->
+      <section class="section-card danger-zone">
+        <h2 class="section-title danger-title">⚠ Danger Zone</h2>
+        <p class="section-hint">
+          Archiving moves all current logs to an archive sheet and resets the roster.
+          <strong>This action cannot be undone.</strong>
+        </p>
+        <button id="btn-archive" class="btn btn-danger btn-full">
+          🗄 Archive &amp; Reset Roster
+        </button>
+      </section>
+
+    </main>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════
+       MODAL: CONFIRM ARCHIVE
+  ════════════════════════════════════════ -->
+  <div id="modal-confirm" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <div class="modal-icon">⚠</div>
+      <h2 id="modal-title" class="modal-title">Confirm Archive &amp; Reset</h2>
+      <p class="modal-body">
+        This will move <strong>all current attendance logs</strong> to an archive sheet
+        and clear the active roster. <br /><br />
+        <strong>This action cannot be undone.</strong>
+      </p>
+      <div class="modal-type-confirm">
+        <label for="confirm-input" class="form-label">
+          Type <code>RESET</code> to confirm
+        </label>
+        <input
+          type="text"
+          id="confirm-input"
+          class="form-input"
+          placeholder="RESET"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+      <div class="modal-actions">
+        <button id="btn-modal-cancel" class="btn btn-secondary">Cancel</button>
+        <button id="btn-modal-confirm" class="btn btn-danger" disabled>Archive &amp; Reset</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="app.js" defer></script>
+</body>
+</html>
